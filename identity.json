@@ -1,0 +1,7 @@
+{
+    "hostname": "xxx.xxx.xxx.xxx",
+    "port": 114514,
+    "username": "your_name",
+    "key_file": "your.rsa.key",
+    "key_password": "your_password"
+}
