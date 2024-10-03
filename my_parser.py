@@ -11,6 +11,12 @@ class ParseError(Exception): pass
 class NetworkError(Exception): pass
 
 
+class IdJsonNotFoundError(FileNotFoundError): pass
+
+
+class RSANotFoundError(FileNotFoundError): pass
+
+
 def showValue(value) -> str:
     """
     value: Any type
@@ -97,7 +103,7 @@ def parse_top(s: str):
     s = startFrom('top', s)
     keys = ['PID', 'USER', 'PR', 'NI', 'VIRT', 'RES', 'SHR', 'S', '%CPU', '%MEM', 'TIME+', 'COMMAND']
     df = parseAsDataframe(s, keys, start_line=7, indices=False)
-    cpu_rate = float(df['%CPU'].sum()) / 100
+    cpu_rate = float(df['%CPU'].astype(float).sum()) / 100
     return makeDict(locals(), 'cpu_rate')
 
 
@@ -109,7 +115,3 @@ def parse_free(s: str):
     memory_used_percent = float(1 - df['free'][0] / df['total'][0]) * 100
     swap_used_percent = float(1 - df['free'][1] / df['total'][1]) * 100
     return makeDict(locals(), 'memory_used_percent, swap_used_percent')
-
-
-if __name__ == '__main__':
-    print(parse_free(sampledata.free))

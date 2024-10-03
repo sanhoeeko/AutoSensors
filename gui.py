@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 import autosensors as ase
 import data
 import my_parser
-
+from utils import getFile, modifyPythonIcon
 
 def getIpAndPort():
     with open('identity.json', 'r') as f:
@@ -17,11 +17,11 @@ def getIpAndPort():
 
 def isHigh(high: float):
     def inner(x: float) -> int:
-        if x < 0.5 * high:
+        if x < 0.6 * high:
             return 0
-        elif x < 0.7 * high:
-            return 1
         elif x < 0.85 * high:
+            return 1
+        elif x < high:
             return 2
         else:
             return 3
@@ -36,14 +36,17 @@ def isReallyHigh(x, high):
 class MyWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi('gui.ui', self)
+        uic.loadUi(getFile('gui.ui'), self)
 
         # ip and port
         self.ip_and_port.setKey('ip_and_port')
 
         # 创建系统托盘图标
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
-        self.tray_icon.setIcon(QtGui.QIcon("icon.png"))  # 设置托盘图标
+        icon = QtGui.QIcon(getFile("icon.png"))
+        self.tray_icon.setIcon(icon)  # 设置托盘图标
+        self.setWindowIcon(icon)  # 设置窗口图标
+        modifyPythonIcon()  # 设置任务栏图标
 
         # 创建托盘菜单
         tray_menu = QtWidgets.QMenu()
@@ -68,12 +71,14 @@ class MyWindow(QMainWindow):
         # 连不上工作站太多次时，不要一直弹消息
         self.cannot_connect_times = 0
 
-        # criteria
+        # 尝试连接工作站，获取 criteria
         try:
-            sensors_result = ase.execCommand(data.sensors_command).parse()
+            with ase.SSHContext() as ssh:
+                sensors_result = ssh.execCommand(data.sensors_command).parse()
+                nproc_result = ssh.execCommand(data.nproc_command).parse()
             self.high_temp = sensors_result['high_temp']
             self.high_fan = sensors_result['crit_fan'] * 0.9
-            self.high_cpus = ase.execCommand(data.nproc_command).parse()['nproc'] * 0.9
+            self.high_cpus = nproc_result['nproc'] * 0.9
             self.high_memory = 90
 
             self.sensors_viewer = [self.avg_temp.setKey('avg_temp').setCriterion(isHigh(self.high_temp)),
@@ -82,6 +87,10 @@ class MyWindow(QMainWindow):
             self.top_viewer = [self.cpu_rate.setKey('cpu_rate').setCriterion(isHigh(self.high_cpus))]
             self.free_viewer = [
                 self.memory_used_percent.setKey('memory_used_percent').setCriterion(isHigh(self.high_memory))]
+        except my_parser.IdJsonNotFoundError:
+            self.toast('初始化失败：请将identity.json放在exe目录下，并重启')
+        except my_parser.RSANotFoundError:
+            self.toast('初始化失败：请将RAS私钥文件放在exe目录下，并重启')
         except:
             self.toast('初始化失败：连不上工作站')
 
@@ -95,20 +104,28 @@ class MyWindow(QMainWindow):
                 self.refresh_inner()
                 self.cannot_connect_times = 0
                 break
+            # 尝试重新连接或解析数据
             except my_parser.ParseError:
                 attempts += 1
             except my_parser.NetworkError:
+                attempts += 1
                 if self.cannot_connect_times < 3:
                     self.toast('连不上工作站')
                     self.cannot_connect_times += 1
+            # 致命错误，直接退出
+            except FileNotFoundError as e:
+                self.toast(f'文件缺失：{e}')
+                break
             except:
                 self.toast('发生了未知错误。怎么会逝呢？')
+                break
 
     def refresh_inner(self):
         # 请求数据并显示
-        sensors_result = ase.execCommand(data.sensors_command).parse()
-        top_result = ase.execCommand(data.top_command).parse()
-        free_result = ase.execCommand(data.free_command).parse()
+        with ase.SSHContext() as ssh:
+            sensors_result = ssh.execCommand(data.sensors_command).parse()
+            top_result = ssh.execCommand(data.top_command).parse()
+            free_result = ssh.execCommand(data.free_command).parse()
         if isReallyHigh(sensors_result['max_temp'], self.high_temp):
             self.toast('警报：CPU温度过高！')
         if isReallyHigh(sensors_result['max_fan'], self.high_fan):

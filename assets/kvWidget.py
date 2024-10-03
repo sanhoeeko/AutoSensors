@@ -2,6 +2,7 @@ from PyQt5 import uic
 from PyQt5.QtWidgets import QWidget
 
 from my_parser import showValue
+from utils import getFile
 
 
 class KVWidget(QWidget):
@@ -21,7 +22,7 @@ class KVWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        uic.loadUi('kvWidget.ui', self)
+        uic.loadUi(getFile('kvWidget.ui'), self)
         self.key = None
         self.criterion = None
 
