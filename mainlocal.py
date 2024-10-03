@@ -34,3 +34,4 @@ if __name__ == "__main__":
         with open(target_file, 'a') as f:
             f.writelines([','.join(getData())])
         lines += 1
+        time.sleep(60)
