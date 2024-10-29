@@ -1,8 +1,7 @@
 import re
+from typing import Union, Iterable
 
 import pandas as pd
-
-import sampledata
 
 
 class ParseError(Exception): pass
@@ -45,10 +44,22 @@ def matchPart(pattern: str, s: str):
     return re.match('(.*?)' + pattern + '(.*?)', s, re.DOTALL).groups()[1:-1]
 
 
-def startFrom(start: str, s: str):
+def _startFrom(start: str, s: str):
     if start not in s:
         raise ValueError
     return start + start.join(s.split(start)[1:])
+
+
+def startFrom(start: Union[str, list[str]], s: str):
+    if not isinstance(start, Iterable):
+        return _startFrom(start, s)
+    else:
+        for head in start:
+            try:
+                return _startFrom(head, s)
+            except ValueError:
+                continue
+        raise ValueError
 
 
 def makeDict(local_dict: dict, var_names: str) -> dict:
@@ -108,7 +119,7 @@ def parse_top(s: str):
 
 
 def parse_free(s: str):
-    s = startFrom('总计', s)
+    s = startFrom(['总计', 'total'], s)
     keys = ['total', 'used', 'free']
     df = parseAsDataframe(s, keys, start_line=1, indices=True)
     df = df.map(lambda x: float(x) / 1024 if x.isdigit() else x)  # 转换到单位：GB
