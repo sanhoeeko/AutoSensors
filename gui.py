@@ -7,7 +7,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 import autosensors as ase
 import data
 import my_parser
-from utils import getFile, modifyPythonIcon
+from utils import getFile, modifyPythonIcon, existingUserFile
+
 
 def getIpAndPort():
     with open('identity.json', 'r') as f:
@@ -38,8 +39,10 @@ class MyWindow(QMainWindow):
         super().__init__()
         uic.loadUi(getFile('gui.ui'), self)
 
-        # ip and port
-        self.ip_and_port.setKey('ip_and_port')
+        # 读取身份信息
+        with open(existingUserFile('identity.json', my_parser.IdJsonNotFoundError), 'r') as f:
+            dic = json.load(f)
+            self.hosts = [data.Host(host) for host in dic['hosts']]
 
         # 创建系统托盘图标
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
@@ -59,6 +62,13 @@ class MyWindow(QMainWindow):
         # 绑定托盘图标点击事件
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
 
+        # 绑定ip选择Combobox事件
+        self.ip_and_port.addItems(list(map(str, self.hosts)))
+        self.ip_and_port.currentIndexChanged.connect(self.refresh)
+
+        # 绑定按钮事件
+        self.B_refresh.clicked.connect(self.refresh)
+
         # 显示托盘图标
         self.tray_icon.show()
         self.toast("运维，启动！")
@@ -73,17 +83,16 @@ class MyWindow(QMainWindow):
 
         # 尝试连接工作站，获取 criteria
         try:
-            with ase.SSHContext() as ssh:
+            with ase.SSHContext(self.current_host()) as ssh:
                 sensors_result = ssh.execCommand(data.sensors_command).parse()
                 nproc_result = ssh.execCommand(data.nproc_command).parse()
             self.high_temp = sensors_result['high_temp']
             self.high_fan = sensors_result['crit_fan'] * 0.9
-            self.high_cpus = nproc_result['nproc'] * 0.9
+            self.high_cpus = nproc_result['nproc'] * 0.8
             self.high_memory = 90
 
             self.sensors_viewer = [self.avg_temp.setKey('avg_temp').setCriterion(isHigh(self.high_temp)),
-                                   self.max_temp.setKey('max_temp').setCriterion(isHigh(self.high_temp)),
-                                   self.max_fan.setKey('max_fan').setCriterion(isHigh(self.high_fan))]
+                                   self.max_temp.setKey('max_temp').setCriterion(isHigh(self.high_temp))]
             self.top_viewer = [self.cpu_rate.setKey('cpu_rate').setCriterion(isHigh(self.high_cpus))]
             self.free_viewer = [
                 self.memory_used_percent.setKey('memory_used_percent').setCriterion(isHigh(self.high_memory))]
@@ -122,7 +131,7 @@ class MyWindow(QMainWindow):
 
     def refresh_inner(self):
         # 请求数据并显示
-        with ase.SSHContext() as ssh:
+        with ase.SSHContext(self.current_host()) as ssh:
             sensors_result = ssh.execCommand(data.sensors_command).parse()
             top_result = ssh.execCommand(data.top_command).parse()
             free_result = ssh.execCommand(data.free_command).parse()
@@ -136,10 +145,13 @@ class MyWindow(QMainWindow):
 
     def update_ui(self, *args):
         # 更新UI状态
-        self.ip_and_port.showDict({'ip_and_port': getIpAndPort()})
+        # self.ip_and_port.showDict({'ip_and_port': getIpAndPort()})
         for result, viewer in zip(args, [self.sensors_viewer, self.top_viewer, self.free_viewer]):
             for kv_widget in viewer:
                 kv_widget.showDict(result)
+
+    def current_host(self):
+        return self.hosts[self.ip_and_port.currentIndex()]
 
     def toast(self, msg, msecs=10000):
         self.tray_icon.showMessage(

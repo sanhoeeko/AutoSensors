@@ -5,15 +5,16 @@ import subprocess
 import paramiko
 
 import my_parser
-from data import Command, Response
+from data import Command, Response, Host
 from utils import existingUserFile
 
 
 class SSHContext:
-    def __init__(self):
+    def __init__(self, current_host: Host):
         # 创建SSH客户端
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.current_host = current_host
 
     def __enter__(self):
         # 读取身份信息
@@ -23,7 +24,8 @@ class SSHContext:
             # 使用RSA私钥进行连接
             key_file = existingUserFile(dic['key_file'], my_parser.RSANotFoundError)
             private_key = paramiko.RSAKey.from_private_key_file(key_file, password=dic['key_password'])
-            self.client.connect(dic['hostname'], int(dic['port']), dic['username'], pkey=private_key, timeout=10)
+            self.client.connect(self.current_host.hostname, int(self.current_host.port),
+                                dic['username'], pkey=private_key, timeout=10)
         # 如果连接失败
         except socket.timeout:
             print('Connection time out.')

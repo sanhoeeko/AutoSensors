@@ -45,3 +45,11 @@ class Response:
                 raise my_parser.ParseError
         else:
             raise my_parser.NetworkError
+
+
+class Host:
+    def __init__(self, s: str):
+        self.hostname, self.port = s.split(':')
+
+    def __repr__(self):
+        return f"{self.hostname}:{self.port}"
