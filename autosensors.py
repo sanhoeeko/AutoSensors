@@ -48,12 +48,3 @@ class SSHContext:
         stdin, stdout, stderr = self.client.exec_command(command.command)
         info = stdout.read().decode('utf-8', errors='ignore')
         return Response.Success(command, info)
-
-
-def localCommand(command: Command) -> Response:
-    try:
-        output = subprocess.run(command.command, shell=True, capture_output=True, text=True)
-        stdout, stderr = output.stdout, output.stderr
-        return Response.Success(command, stdout)
-    except Exception as e:
-        return Response.Fail(command, str(e))

@@ -1,4 +1,5 @@
 import re
+import sys
 from typing import Union, Iterable
 
 import pandas as pd
@@ -122,7 +123,12 @@ def parse_free(s: str):
     s = startFrom(['总计', 'total'], s)
     keys = ['total', 'used', 'free']
     df = parseAsDataframe(s, keys, start_line=1, indices=True)
-    df = df.map(lambda x: float(x) / 1024 if x.isdigit() else x)  # 转换到单位：GB
-    memory_used_percent = float(1 - df['free'][0] / df['total'][0]) * 100
-    swap_used_percent = float(1 - df['free'][1] / df['total'][1]) * 100
+    if sys.version_info < (3, 7):
+        pass
+    else:
+        df = df.map(lambda x: float(x) / 1024 if x.isdigit() else x)  # 转换到单位：GB
+
+    memory_used_percent = (1 - float(df['free'][0]) / float(df['total'][0])) * 100
+    swap_used_percent = (1 - float(df['free'][1]) / float(df['total'][1])) * 100
+
     return makeDict(locals(), 'memory_used_percent, swap_used_percent')

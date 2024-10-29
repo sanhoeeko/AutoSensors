@@ -1,7 +1,6 @@
 {
-    "hostname": "xxx.xxx.xxx.xxx",
-    "port": 114514,
-    "username": "your_name",
-    "key_file": "your.rsa.key",
-    "key_password": "your_password"
+    "hosts": ["202.120.13.86:51315", "202.120.13.86:51316"],
+    "username": "gengjie",
+    "key_file": "shirokon123.key",
+    "key_password": "shirokon123"
 }
