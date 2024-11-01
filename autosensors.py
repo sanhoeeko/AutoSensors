@@ -1,6 +1,5 @@
 import json
 import socket
-import subprocess
 
 import paramiko
 
@@ -48,3 +47,16 @@ class SSHContext:
         stdin, stdout, stderr = self.client.exec_command(command.command)
         info = stdout.read().decode('utf-8', errors='ignore')
         return Response.Success(command, info)
+
+    def fetchFile(self, remote_path, local_path):
+        # 拉取文件
+        sftp = self.client.open_sftp()
+        try:
+            sftp.get(remote_path, local_path)
+            print(f"File {remote_path} successfully downloaded to {local_path}")
+            sftp.close()
+            return 0
+        except FileNotFoundError:
+            print(f"File {remote_path} not found on remote host.")
+            sftp.close()
+            return -1

@@ -53,3 +53,6 @@ class Host:
 
     def __repr__(self):
         return f"{self.hostname}:{self.port}"
+
+    def to_filename(self):
+        return f"{self.hostname}_{self.port}"

@@ -1,6 +1,11 @@
 {
-    "hosts": ["202.120.13.86:51315", "202.120.13.86:51316"],
-    "username": "gengjie",
-    "key_file": "shirokon123.key",
-    "key_password": "shirokon123"
+    "hosts": [
+        "114.514.19.19:810",
+        "114.514.19.19:811"
+    ],
+    "username": "yourname",
+    "key_file": "path/to/your.key",
+    "key_password": "your_password",
+    "remote_log_path": "/home/yourname/autoSensors/log.txt",
+    "local_log_path": "log.txt"
 }

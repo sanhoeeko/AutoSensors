@@ -1,14 +1,14 @@
 import time
 
 # 记录文件路径
-log_file_path = 'log.csv'
+log_file_path = 'log.txt'
 
 # 每个日志条目的格式
 log_format = "{timestamp}, {data}\n"
 fixed_line_length = 256  # 预定每行的字节数
 
-# 日志文件的总行数（例如假设每分钟记录一次数据，一个月约有 60 * 24 * 30 行）
-total_lines = 60 * 24 * 30
+# 日志文件的总行数（例如假设每10分钟记录一次数据，两星期约有 14 * 24 * 6 行）
+total_lines = 14 * 24 * 6
 
 
 def initialize_log_file():

@@ -68,6 +68,7 @@ class MyWindow(QMainWindow):
 
         # 绑定按钮事件
         self.B_refresh.clicked.connect(self.refresh)
+        self.B_weekreport.clicked.connect(self.fetchLog)
 
         # 显示托盘图标
         self.tray_icon.show()
@@ -118,9 +119,7 @@ class MyWindow(QMainWindow):
                 attempts += 1
             except my_parser.NetworkError:
                 attempts += 1
-                if self.cannot_connect_times < 3:
-                    self.toast('连不上工作站')
-                    self.cannot_connect_times += 1
+                self.reportNetworkError()
             # 致命错误，直接退出
             except FileNotFoundError as e:
                 self.toast(f'文件缺失：{e}')
@@ -145,18 +144,45 @@ class MyWindow(QMainWindow):
 
     def update_ui(self, *args):
         # 更新UI状态
-        # self.ip_and_port.showDict({'ip_and_port': getIpAndPort()})
         for result, viewer in zip(args, [self.sensors_viewer, self.top_viewer, self.free_viewer]):
             for kv_widget in viewer:
                 kv_widget.showDict(result)
 
-    def current_host(self):
+    def fetchLog(self):
+        # 从identity.json中获取文件路径
+        with open(existingUserFile('identity.json', my_parser.IdJsonNotFoundError), 'r') as f:
+            dic = json.load(f)
+        remote_path = dic['remote_log_path']
+        local_path = self.current_host().to_filename() + '_' + dic['local_log_path']
+        if remote_path is None or remote_path == '':
+            return
+        # 获取log文件
+        try:
+            with ase.SSHContext(self.current_host()) as ssh:
+                status = ssh.fetchFile(remote_path, local_path)
+            if status == -1:
+                self.toast("没有发现远程主机上的log文件！")
+                return
+        except my_parser.NetworkError:
+            self.reportNetworkError()
+            return
+        except:
+            self.toast('发生了未知错误。怎么会逝呢？')
+            return
+        self.toast('成功拉取log文件！')
+
+    def current_host(self) -> data.Host:
         return self.hosts[self.ip_and_port.currentIndex()]
 
     def toast(self, msg, msecs=10000):
         self.tray_icon.showMessage(
             "工作站实时监测", msg, QtWidgets.QSystemTrayIcon.Information, msecs
         )
+
+    def reportNetworkError(self):
+        if self.cannot_connect_times < 3:
+            self.toast('连不上工作站')
+            self.cannot_connect_times += 1
 
     def closeEvent(self, event):
         event.ignore()

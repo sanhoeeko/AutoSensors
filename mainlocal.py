@@ -5,6 +5,7 @@ import time
 import data
 import log
 from my_parser import showValue
+from setproctitle import setproctitle
 
 columns = ['avg_temp', 'max_temp', 'max_fan', 'cpu_rate', 'memory_used_percent', 'swap_used_percent']
 target_file = 'monitor.csv'
@@ -32,9 +33,10 @@ def getData() -> list:
 
 
 if __name__ == "__main__":
+    setproctitle('monitor')
     current_line_ptr = 0
     log.initialize_log_file()
     while True:
         log.make_log(current_line_ptr, getData())
         current_line_ptr += 1
-        time.sleep(60)
+        time.sleep(600)
