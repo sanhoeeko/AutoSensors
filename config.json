@@ -1,0 +1,16 @@
+{
+    "hosts": [
+        "114.514.19.19:810",
+        "114.514.19.19:811"
+    ],
+    "username": "your name",
+    "key_file": "path/to/your.key",
+    "key_password": "your$password",
+    "remote_log_path": "/home/your_name/autoSensors/log.txt",
+    "local_log_path": "log.txt",
+    "message_box": true,
+    "high_temp_rate": 1.0,
+    "high_fan_rate": 0.9,
+    "high_cpu_rate": 0.8,
+    "high_memory_rate": 0.9
+}
