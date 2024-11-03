@@ -121,14 +121,14 @@ def parse_top(s: str):
 
 def parse_free(s: str):
     s = startFrom(['总计', 'total'], s)
-    keys = ['total', 'used', 'free']
-    df = parseAsDataframe(s, keys, start_line=1, indices=True)
-    if sys.version_info < (3, 7):
-        pass
-    else:
-        df = df.map(lambda x: float(x) / 1024 if x.isdigit() else x)  # 转换到单位：GB
+    keys = ['total', 'used', 'free', 'share', 'buffer/cache', 'available']
+    mem_df = parseAsDataframe(s, keys, start_line=1, indices=True)
+    s = startFrom(['交换', 'Swap'], s)
+    swap_arr = list(map(float, filter(lambda x: x, s.split(' ')[1:])))
+    swap_total, swap_used, swap_free = swap_arr
 
-    memory_used_percent = (1 - float(df['free'][0]) / float(df['total'][0])) * 100
-    swap_used_percent = (1 - float(df['free'][1]) / float(df['total'][1])) * 100
+    memory_used_percent = (1 - float(mem_df['available'][0]) / float(mem_df['total'][0])) * 100
+    buffer_cache_percent = (1 - float(mem_df['buffer/cache'][0]) / float(mem_df['total'][0])) * 100
+    swap_used_percent = swap_used / swap_total * 100
 
-    return makeDict(locals(), 'memory_used_percent, swap_used_percent')
+    return makeDict(locals(), 'memory_used_percent, buffer_cache_percent, swap_used_percent')

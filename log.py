@@ -10,7 +10,8 @@ fixed_line_length = 256  # 预定每行的字节数
 # 日志文件的总行数（例如假设每10分钟记录一次数据，两星期约有 14 * 24 * 6 行）
 total_lines = 14 * 24 * 6
 
-columns = ['avg_temp', 'max_temp', 'max_fan', 'cpu_rate', 'memory_used_percent', 'swap_used_percent']
+columns = ['avg_temp', 'max_temp', 'max_fan', 'cpu_rate',
+           'memory_used_percent', 'buffer_cache_percent', 'swap_used_percent']
 
 
 def initialize_log_file():
