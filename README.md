@@ -57,16 +57,27 @@
 
 ### 设置
 
-`config.json`选项列表：
+**`config.json`选项列表：**
 
 `hosts: list` - 主机IP地址和端口号，可以添加多个主机。
+
 `username: str` - 你用来登陆工作站的用户名。
+
 `key_file: str` - RSA私钥文件路径。
+
 `key_password: str` - RAS私钥文件的密码。
+
 `remote_log_path: str` - 工作站运行`mainlocal.py`生成的`log.txt`所在的路径。如果不想在工作站运行自动监控程序，此项填`null`。
+
 `local_log_path: str` - 拉取工作站状态记录时，下载的文件的路径。
+
 `message_box: bool` - `true`弹出小窗口显示信息和告警。`false`使用Windows 10通知消息显示信息和告警。（如果选择此项，请确保`gui.exe`所在的文件夹有权限发送通知消息，否则收不到告警）
+
 `high_temp_rate: float` - 当前最高CPU温度超过`sensors`规定的high temperature多少倍时告警。
+
 `high_fan_rate: float` - 当前风扇转速超过`sensors`规定的max fan多少倍时告警。
+
 `high_cpu_rate: float` - 当CPU总占用率达到多少时告警。
+
 `high_memory_rate: float` - 当内存总占用率达到多少时告警。
+
