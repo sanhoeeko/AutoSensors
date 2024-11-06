@@ -75,7 +75,7 @@ class MyWindow(QMainWindow):
 
         # 绑定ip选择Combobox事件
         self.ip_and_port.addItems(list(map(str, self.hosts)))
-        self.ip_and_port.currentIndexChanged.connect(self.refresh)
+        self.ip_and_port.currentIndexChanged.connect(self.switch)
 
         # 绑定按钮事件
         self.B_refresh.clicked.connect(self.refresh)
@@ -93,6 +93,11 @@ class MyWindow(QMainWindow):
         # 连不上工作站太多次时，不要一直弹消息
         self.cannot_connect_times = 0
 
+        if self.initialize() == 0:
+            self.refresh()
+            self.fetchLog()
+
+    def initialize(self):
         # 尝试连接工作站，获取 criteria
         try:
             with ase.SSHContext(self.current_host()) as ssh:
@@ -107,16 +112,19 @@ class MyWindow(QMainWindow):
                                    self.max_temp.setKey('max_temp').setCriterion(isHigh(self.high_temp))]
             self.top_viewer = [self.cpu_rate.setKey('cpu_rate').setCriterion(isHigh(self.high_cpus))]
             self.free_viewer = [
-                self.memory_used_percent.setKey('memory_used_percent').setCriterion(isHigh(self.high_memory))]
+                self.memory_used_percent.setKey('memory_used_percent').setCriterion(isHigh(self.high_memory))
+            ]
+            # Successfully initialized
+            return 0
         except my_parser.IdJsonNotFoundError:
             self.toast('初始化失败：请将config.json放在exe目录下，并重启')
+            return -1
         except my_parser.RSANotFoundError:
             self.toast('初始化失败：请将RAS私钥文件放在exe目录下，并重启')
+            return -1
         except:
             self.toast('初始化失败：连不上工作站')
-
-        self.refresh()
-        self.fetchLog()
+            return -1
 
     def refresh(self):
         # 请求数据并显示（外加异常处理）
@@ -153,6 +161,10 @@ class MyWindow(QMainWindow):
         if free_result['swap_used_percent'] > 0:
             self.toast('警报：内存满了！')
         self.update_ui(sensors_result, top_result, free_result)
+
+    def switch(self):
+        if self.initialize() == 0:
+            self.refresh()
 
     def update_ui(self, *args):
         # 更新UI状态
