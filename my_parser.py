@@ -1,5 +1,4 @@
 import re
-import sys
 from typing import Union, Iterable
 
 import pandas as pd
@@ -15,6 +14,13 @@ class IdJsonNotFoundError(FileNotFoundError): pass
 
 
 class RSANotFoundError(FileNotFoundError): pass
+
+
+def safe_eval(func, default, catch=Exception):
+    try:
+        return func()
+    except catch:
+        return default
 
 
 def showValue(value) -> str:
@@ -102,9 +108,9 @@ def parse_sensors(s: str):
             parts = multiSplit(': RPM')(line)
             rpm = int(parts[1])
             fan_rpm.append(rpm)
-    high_temp = float(matchPart(r'high = (.*?)°C', s)[0])
-    crit_temp = float(matchPart(r'crit = (.*?)°C', s)[0])
-    crit_fan = int(matchPart(r'max = (.*?) RPM', s)[0])
+    high_temp = safe_eval(lambda: float(matchPart(r'high = (.*?)°C', s)[0]), 81.0)
+    crit_temp = safe_eval(lambda: float(matchPart(r'crit = (.*?)°C', s)[0]), 91.0)
+    crit_fan = safe_eval(lambda: int(matchPart(r'max = (.*?) RPM', s)[0]), 3000)
     avg_temp = sum(temperatures) / len(temperatures)
     max_temp = max(temperatures)
     max_fan = max(fan_rpm)
