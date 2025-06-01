@@ -158,7 +158,7 @@ class MyWindow(QMainWindow):
             self.toast('警报：CPU温度过高！')
         if isReallyHigh(sensors_result['max_fan'], self.high_fan):
             self.toast('警报：风扇转速过快！')
-        if free_result['swap_used_percent'] > 0:
+        if free_result['memory_used_percent'] > 80 and free_result['swap_used_percent'] > 0:
             self.toast('警报：内存满了！')
         self.update_ui(sensors_result, top_result, free_result)
 
