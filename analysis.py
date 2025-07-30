@@ -1,3 +1,5 @@
+import sys
+
 import matplotlib.dates as mdates
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -75,3 +77,8 @@ def plotKeyInfo(input_df: pd.DataFrame):
     # 调整布局，将左边20%用于坐标轴
     fig.subplots_adjust(left=0.4, right=0.9)
     plt.show()
+
+
+if __name__ == '__main__':
+    log_file_path = sys.argv[1]
+    plotKeyInfo(readLogFile(log_file_path))

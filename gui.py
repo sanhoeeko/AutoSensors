@@ -35,26 +35,9 @@ def isReallyHigh(x, high):
     return isHigh(high)(x) == 3
 
 
-class MyWindow(QMainWindow):
+class TrayWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi(getFile('gui.ui'), self)
-
-        with open(existingUserFile('config.json', my_parser.IdJsonNotFoundError), 'r') as f:
-            dic = json.load(f)
-            # 读取主机IP等信息
-            self.hosts = [data.Host(host) for host in dic['hosts']]
-            # 读取消息提示设置
-            self.is_message_box = dic['message_box']
-            # 读取告警比值
-            self.high_temp_rate = float(dic['high_temp_rate'])
-            self.high_fan_rate = float(dic['high_fan_rate'])
-            self.high_cpu_rate = float(dic['high_cpu_rate'])
-            self.high_memory_rate = float(dic['high_memory_rate'])
-            # 读取log文件路径
-            self.local_path = self.current_host().to_filename() + '_' + dic['local_log_path']
-            self.remote_path = dic['remote_log_path']
-
         # 创建系统托盘图标
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
         icon = QtGui.QIcon(getFile("icon.png"))
@@ -69,38 +52,69 @@ class MyWindow(QMainWindow):
 
         # 绑定托盘菜单事件
         quit_action.triggered.connect(QtWidgets.qApp.quit)
-
         # 绑定托盘图标点击事件
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
 
+    def showTray(self):
+        # 显示托盘图标
+        self.tray_icon.show()
+        self.toast("运维，启动！")
+
+
+class MyWindow(TrayWindow):
+    def __init__(self):
+        super().__init__()
+        uic.loadUi(getFile('gui.ui'), self)
+
+        self.current_host_idx = 0
+
+        # 解析config.json
+        with open(existingUserFile('config.json', my_parser.IdJsonNotFoundError), 'r') as f:
+            dic = json.load(f)
+            # 读取主机IP等信息
+            self.hosts = [data.Host(host) for host in dic['hosts']]
+            # 读取消息提示设置
+            self.is_message_box = dic['message_box']
+            # 读取告警比值
+            self.high_temp_rate = float(dic['high_temp_rate'])
+            self.high_fan_rate = float(dic['high_fan_rate'])
+            self.high_cpu_rate = float(dic['high_cpu_rate'])
+            self.high_memory_rate = float(dic['high_memory_rate'])
+            # 读取log文件路径
+            self.local_path_suffix = dic['local_log_path']
+            self.remote_path = dic['remote_log_path']
+
         # 绑定ip选择Combobox事件
         self.ip_and_port.addItems(list(map(str, self.hosts)))
-        self.ip_and_port.currentIndexChanged.connect(self.switch)
+        self.ip_and_port.currentIndexChanged.connect(self.switchHost)
 
         # 绑定按钮事件
         self.B_refresh.clicked.connect(self.refresh)
         self.B_weekreport.clicked.connect(self.plotLog)
 
-        # 显示托盘图标
-        self.tray_icon.show()
-        self.toast("运维，启动！")
-
         # 创建定时器
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.refresh)
-        self.timer.start(60000)  # 每60秒触发一次
+        self.timer.start(10000)  # 每10秒触发一次
 
         # 连不上工作站太多次时，不要一直弹消息
         self.cannot_connect_times = 0
 
-        if self.initialize() == 0:
-            self.refresh()
-            self.fetchLog()
+        # 为防止第一个工作站连不上，依次尝试连接所有的工作站
+        for i in range(len(self.hosts)):
+            if self.switchHost(i) == 0:
+                self.refresh()
+                self.fetchLog()
+                break
+        self.showTray()
 
-    def initialize(self):
+    def initialize(self, host: data.Host):
+        """
         # 尝试连接工作站，获取 criteria
+        :return: 0: Success | 1: Fail
+        """
         try:
-            with ase.SSHContext(self.current_host()) as ssh:
+            with ase.SSHContext(host) as ssh:
                 sensors_result = ssh.execCommand(data.sensors_command).parse()
                 nproc_result = ssh.execCommand(data.nproc_command).parse()
             self.high_temp = sensors_result['high_temp'] * self.high_temp_rate
@@ -150,7 +164,7 @@ class MyWindow(QMainWindow):
 
     def refresh_inner(self):
         # 请求数据并显示
-        with ase.SSHContext(self.current_host()) as ssh:
+        with ase.SSHContext(self.current_host) as ssh:
             sensors_result = ssh.execCommand(data.sensors_command).parse()
             top_result = ssh.execCommand(data.top_command).parse()
             free_result = ssh.execCommand(data.free_command).parse()
@@ -162,9 +176,23 @@ class MyWindow(QMainWindow):
             self.toast('警报：内存满了！')
         self.update_ui(sensors_result, top_result, free_result)
 
-    def switch(self):
-        if self.initialize() == 0:
+    def switchHost(self, to: int = None):
+        """
+        :return: 0: Success | 1: Fail
+        """
+        if to is None:
+            target_index = self.ip_and_port.currentIndex()
+        else:
+            target_index = to
+
+        if self.initialize(self.hosts[target_index]) == 0:
+            self.current_host_idx = target_index
+            self.ip_and_port.setCurrentIndex(target_index)
             self.refresh()
+            return 0
+        else:
+            self.ip_and_port.setCurrentIndex(self.current_host_idx)
+            return -1
 
     def update_ui(self, *args):
         # 更新UI状态
@@ -177,7 +205,7 @@ class MyWindow(QMainWindow):
             return -1
         # 获取log文件
         try:
-            with ase.SSHContext(self.current_host()) as ssh:
+            with ase.SSHContext(self.current_host) as ssh:
                 status = ssh.fetchFile(self.remote_path, self.local_path)
             if status == -1:
                 self.toast("没有发现远程主机上的log文件！")
@@ -195,8 +223,13 @@ class MyWindow(QMainWindow):
         if self.fetchLog() == 0:
             ana.plotKeyInfo(ana.readLogFile(self.local_path))
 
+    @property
     def current_host(self) -> data.Host:
-        return self.hosts[self.ip_and_port.currentIndex()]
+        return self.hosts[self.current_host_idx]
+
+    @property
+    def local_path(self):
+        return self.current_host.to_filename() + '_' + self.local_path_suffix
 
     def toast(self, msg):
         if self.is_message_box:
