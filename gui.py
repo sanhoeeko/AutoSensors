@@ -101,11 +101,17 @@ class MyWindow(TrayWindow):
         self.cannot_connect_times = 0
 
         # 为防止第一个工作站连不上，依次尝试连接所有的工作站
+        connected = False
         for i in range(len(self.hosts)):
             if self.switchHost(i) == 0:
+                connected = True
                 self.refresh()
                 self.fetchLog()
                 break
+        if not connected:
+            self.toast('Fatal error: 没有可以连接的工作站！')
+            raise OSError
+
         self.showTray()
 
     def initialize(self, host: data.Host):

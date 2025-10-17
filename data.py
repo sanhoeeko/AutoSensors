@@ -1,3 +1,5 @@
+import traceback
+
 import my_parser
 
 
@@ -41,7 +43,11 @@ class Response:
             try:
                 return getattr(my_parser, f'parse_{self.restype}')(self.info)
             except Exception as e:
-                print(e)
+                print('Parsing error occurred when processing the following message:')
+                print('======')
+                print(self.info)
+                print('======')
+                traceback.print_exc()
                 raise my_parser.ParseError
         else:
             raise my_parser.NetworkError
